@@ -67,7 +67,7 @@ struct RootView: View {
         .sheet(item: $editingGroup) { group in
             EditGroupView(editing: group, onSaved: reload)
         }
-        .sheet(isPresented: $showSettingsStub) {
+        .sheet(isPresented: $showSettingsStub, onDismiss: reload) {
             SettingsStubView()
         }
         .confirmationDialog("删除编组", isPresented: $showDeleteConfirm, presenting: pendingDelete) { group in
@@ -215,22 +215,97 @@ struct RootView: View {
     }
 }
 
-/// 设置页占位（M6 实现后整体替换）
+/// 设置页占位（M6 实现后整体替换）。
+/// 临时提供"更新数据库"入口：种子库只含一条占位记录，真实战备数据必须联网更新获取，
+/// 完整设置页要到 M6，这里先接通 M3 的更新链路让 App 提前可用
 private struct SettingsStubView: View {
     @Environment(\.dismiss) private var dismiss
 
+    @State private var isUpdating = false
+    @State private var statusText = ""
+    @State private var updateTask: Task<Void, Never>?
+    @State private var errorMessage: String?
+
     var body: some View {
         NavigationStack {
-            ContentUnavailableView {
-                Label("设置页尚未就绪", systemImage: "gearshape")
-            } description: {
-                Text("连接、同步、数据库更新与备份功能将在 M6 实现。")
+            List {
+                Section("战备数据库") {
+                    Button(action: startUpdate) {
+                        if isUpdating {
+                            HStack(spacing: 10) {
+                                ProgressView()
+                                Text(statusText)
+                                    .font(.footnote)
+                            }
+                        } else {
+                            Label("从官方源更新战备数据库（HD2）", systemImage: "arrow.down.circle")
+                        }
+                    }
+                    .disabled(isUpdating)
+                    if !isUpdating && !statusText.isEmpty {
+                        Text(statusText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Section {
+                    Text("连接、同步、备份等完整设置将在 M6 实现；此页为临时入口。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .navigationTitle("设置")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
+                        updateTask?.cancel()
                         dismiss()
                     }
+                }
+            }
+            .errorAlert($errorMessage)
+        }
+    }
+
+    /// 执行完整更新流程（index → 数据库重建 → 图标逐个下载），进度实时展示
+    private func startUpdate() {
+        isUpdating = true
+        statusText = "正在获取索引…"
+        updateTask = Task {
+            do {
+                let version = try await DatabaseUpdater().update(channel: 0) { event in
+                    Task { @MainActor in
+                        switch event {
+                        case .fetchingIndex:
+                            statusText = "正在获取索引…"
+                        case .fetchingDatabase(let displayName):
+                            statusText = "正在下载数据库：\(displayName)"
+                        case .downloadingIcon(let current, let total, let fileName):
+                            statusText = "下载图标 \(current)/\(total)：\(fileName)"
+                        case .iconProgress:
+                            break // 单文件字节进度在临时页不展示
+                        case .finished:
+                            break
+                        }
+                    }
+                }
+                await MainActor.run {
+                    // 图标文件已变化，清掉内存缓存强制重新读盘
+                    StratagemIconCache.shared.clear()
+                    statusText = "更新完成，版本 \(version)"
+                    isUpdating = false
+                }
+            } catch is CancellationError {
+                await MainActor.run {
+                    statusText = "已取消（已下载部分保留，重试会跳过）"
+                    isUpdating = false
+                }
+            } catch {
+                await MainActor.run {
+                    statusText = ""
+                    isUpdating = false
+                    errorMessage = "数据库更新失败：\(error.localizedDescription)"
                 }
             }
         }
