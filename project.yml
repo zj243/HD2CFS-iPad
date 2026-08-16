@@ -31,7 +31,12 @@ targets:
     type: application
     platform: iOS
     sources:
-      - CFSiPad
+      # Resources 目录整体走 resources 构建阶段（种子数据库、音效等非源码文件）
+      - path: CFSiPad
+        excludes:
+          - "Resources/**"
+      - path: CFSiPad/Resources
+        buildPhase: resources
     dependencies:
       - package: GRDB
         product: GRDB
