@@ -1,8 +1,8 @@
 # CFS iPad 移植开发计划
 
 把 [WisteFinch/Helldivers2CallForStratagemsOnPhone](https://github.com/WisteFinch/Helldivers2CallForStratagemsOnPhone)（安卓端《绝地潜兵2》战备呼叫工具，MIT 许可）移植为 iPadOS 原生 App。
-安卓源码与 Rust 服务器均在本地：`C:\game\hl2\Helldivers2CallForStratagemsOnPhone`。
-完整可行性评估报告：https://claude.ai/code/artifact/6db8948c-adcb-4dff-8b8a-b4a542049a0b
+安卓源码与 Rust 服务器来自原项目克隆（开发机上与本仓库同级的 `Helldivers2CallForStratagemsOnPhone/` 目录，只读参考）。
+移植前做过完整的可行性评估（架构分析、协议核实、技术选型），关键结论均已沉淀在本文件第 0 节与第 3 节。
 
 > **本文件是唯一的交接入口。** 任何人（或任何 agent）继续开发时：先读本文件，再按"第 6 节 执行约定"操作。每完成一个模块，更新第 1 节看板和第 7 节变更记录。
 
@@ -230,7 +230,7 @@ cfs-ipad/
 3. **一次会话一个模块**；模块过大做不完时，在"当前状态"写清断点（做到哪个文件哪一步）。
 4. **编码规范**：遵守用户全局 CLAUDE.md（中文业务注释、作者标记 ZJ、单文件 ≤1000 行、不碎片化拆分、错误必须处理）。协议层报文字段名必须与 3.1 节 JSON 完全一致，不得"顺手规范化"。
 5. **不引入新依赖**：SPM 依赖锁定为 GRDB + SwiftDraw 两个；新增依赖需用户点头。
-6. **不改服务器、不改安卓端**：`C:\game\hl2\Helldivers2CallForStratagemsOnPhone` 只读。
+6. **不改服务器、不改安卓端**：本地的原项目克隆 `Helldivers2CallForStratagemsOnPhone/` 只读。
 7. Git 操作遵守用户全局规范：不主动 commit/push，完成后给建议 commit message。
 
 ## 7. 变更记录
