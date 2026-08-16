@@ -159,6 +159,22 @@ final class DownloadFlowTests: XCTestCase {
         XCTAssertEqual(settings.dbVersion, "0")
     }
 
+    /// SVG use/href 兼容性修补：SVG2 的 <use href> 改写为 xlink:href 并补命名空间；
+    /// 已是 xlink 写法或不含 <use> 的文件必须原样返回
+    func testPatchUseHref() {
+        let svg2Style = #"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 126 126"><defs><path id="mgr" d="M1 1"/></defs><use href="#mgr"/><use href="#mgr" transform="translate(0 18)"/></svg>"#
+        let patched = StratagemIconCache.patchUseHref(svg2Style)
+        XCTAssertTrue(patched.contains(#"xlink:href="#mgr""#))
+        XCTAssertTrue(patched.contains("xmlns:xlink=\"http://www.w3.org/1999/xlink\""))
+        XCTAssertFalse(patched.contains(" href=\"#mgr\""), "全部 href 都应被改写")
+
+        let xlinkStyle = #"<svg xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#a"/></svg>"#
+        XCTAssertEqual(StratagemIconCache.patchUseHref(xlinkStyle), xlinkStyle, "已是 xlink 写法应原样返回")
+
+        let noUse = #"<svg><path d="M1 1" fill="#fff"/></svg>"#
+        XCTAssertEqual(StratagemIconCache.patchUseHref(noUse), noUse, "不含 use 应原样返回")
+    }
+
     /// 自定义频道地址为空必须明确报错
     func testUpdaterEmptyCustomURLThrows() async throws {
         let suiteName = "cfs.test.download.empty.\(UUID().uuidString)"
