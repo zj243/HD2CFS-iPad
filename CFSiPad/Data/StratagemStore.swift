@@ -9,7 +9,7 @@ import Foundation
 import GRDB
 
 /// 战备（stratagem_table 一行）。steps 列在库中为 JSON 数组文本，对外使用 [Int] 计算属性
-struct Stratagem: Codable, Equatable, FetchableRecord, PersistableRecord {
+struct Stratagem: Codable, Equatable, Hashable, Identifiable, FetchableRecord, PersistableRecord {
     static let databaseTableName = "stratagem_table"
 
     var id: Int

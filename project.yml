@@ -10,6 +10,8 @@ options:
   createIntermediateGroups: true
   deploymentTarget:
     iOS: "17.0"
+  # 开发语言设为简体中文，使系统控件（编辑/完成按钮等）随中文环境显示
+  developmentLanguage: zh-Hans
 
 # 依赖锁定为两个（见 PLAN.md 第 6 节约定）：
 # GRDB 数据库层（M2 使用）、SwiftDraw 渲染战备 SVG 图标（M3 使用）
@@ -51,6 +53,7 @@ targets:
       path: CFSiPad/Support/Info.plist
       properties:
         CFBundleDisplayName: CFS iPad
+        CFBundleDevelopmentRegion: zh-Hans
         # SwiftUI 无故事板启动屏，缺失会导致 App 以兼容分辨率运行
         UILaunchScreen: {}
         # iPad 全方向自适应（不锁方向，兼容分屏/台前调度），见评估结论

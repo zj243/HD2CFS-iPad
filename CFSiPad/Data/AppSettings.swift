@@ -229,4 +229,19 @@ final class AppSettings {
         get { string("db_name_zh", "") }
         set { defaults.set(newValue, forKey: "db_name_zh") }
     }
+
+    /// 当前战备库显示名：按战备名语言设置取中/英显示名，未下载过（显示名为空）时回退库标识名
+    var dbDisplayName: String {
+        let prefersChinese: Bool
+        switch ctrlLang {
+        case "zh-CN":
+            prefersChinese = true
+        case "en":
+            prefersChinese = false
+        default:
+            prefersChinese = Locale.preferredLanguages.first?.hasPrefix("zh") ?? false
+        }
+        let preferred = prefersChinese ? dbNameZh : dbNameEn
+        return preferred.isEmpty ? dbName : preferred
+    }
 }

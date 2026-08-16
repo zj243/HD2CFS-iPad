@@ -8,8 +8,9 @@
 import Foundation
 import GRDB
 
-/// 战备编组（group_table 一行）。id 为自增主键，插入后回填
-struct StratagemGroup: Codable, Equatable, FetchableRecord, MutablePersistableRecord {
+/// 战备编组（group_table 一行）。id 为自增主键，插入后回填。
+/// Hashable/Identifiable 供 SwiftUI 导航与列表使用
+struct StratagemGroup: Codable, Equatable, Hashable, Identifiable, FetchableRecord, MutablePersistableRecord {
     static let databaseTableName = "group_table"
 
     var id: Int64?
@@ -49,6 +50,13 @@ final class GroupStore {
 
     init(queue: DatabaseQueue) {
         self.queue = queue
+    }
+
+    /// 按主键取单个编组（编辑保存后浏览页重载用）
+    func fetch(id: Int64) throws -> StratagemGroup? {
+        try queue.read { db in
+            try StratagemGroup.fetchOne(db, key: id)
+        }
     }
 
     /// 全部编组，按 idx、id 排序（新建组 idx 为 Int32 上限，自然排在末尾）
