@@ -76,7 +76,9 @@ final class AppDatabase {
             }
             try FileManager.default.copyItem(at: seedURL, to: stratagemURL)
         }
-        stratagemStore = StratagemStore(queue: try DatabaseQueue(path: stratagemURL.path))
+        let stratagemQueue = try DatabaseQueue(path: stratagemURL.path)
+        try Self.ensureStratagemSchema(stratagemQueue)
+        stratagemStore = StratagemStore(queue: stratagemQueue)
 
         // 用户数据库：编组表（列结构与安卓版 group_table 对齐，list 存 JSON 数组文本）
         let appQueue = try DatabaseQueue(path: directory.appendingPathComponent("app.db").path)
@@ -92,5 +94,28 @@ final class AppDatabase {
         }
         try migrator.migrate(appQueue)
         groupStore = GroupStore(queue: appQueue)
+    }
+
+    /// 确保战备表结构为 v2（含 idx 列）。
+    /// 种子文件是安卓 Room v1 结构（无 idx 列），安卓端打开时靠 AutoMigration 1→2 补列；
+    /// 这里等价执行：表缺失则按 v2 建表，表存在但缺 idx 列则 ALTER TABLE 补列（幂等）
+    private static func ensureStratagemSchema(_ queue: DatabaseQueue) throws {
+        try queue.write { db in
+            guard try db.tableExists("stratagem_table") else {
+                try db.create(table: "stratagem_table") { t in
+                    t.autoIncrementedPrimaryKey("id")
+                    t.column("name", .text).notNull().defaults(to: "")
+                    t.column("nameZh", .text).notNull().defaults(to: "")
+                    t.column("icon", .text).notNull().defaults(to: "")
+                    t.column("steps", .text).notNull().defaults(to: "[]")
+                    t.column("idx", .integer).notNull().defaults(to: 0)
+                }
+                return
+            }
+            let columns = try db.columns(in: "stratagem_table").map(\.name)
+            if !columns.contains("idx") {
+                try db.execute(sql: "ALTER TABLE stratagem_table ADD COLUMN idx INTEGER NOT NULL DEFAULT 0")
+            }
+        }
     }
 }

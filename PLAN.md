@@ -29,16 +29,16 @@
 
 - [x] 评估与技术选型（完成于 2026-08-16，见评估报告）
 - [x] M0 工程骨架 + CI 出包流水线（2026-08 验收通过：CI 出包 → 爱思助手签名 → iPad 真机启动占位界面）
-- [ ] M1 网络协议层（TCP + 认证 + 心跳重连）—— **代码已完成，待 CI 验证**（push 后看 Actions 单元测试是否全绿）
-- [ ] M2 数据层（GRDB + 设置存储）—— **代码已完成，待 CI 验证**（与 M1 一起 push 验证即可）
+- [x] M1 网络协议层（TCP + 认证 + 心跳重连）（2026-08 CI 全绿验收通过）
+- [ ] M2 数据层（GRDB + 设置存储）—— **已修复种子库 v1 迁移问题，待重新 push 验证**
 - [ ] M3 资源下载（战备库 + SVG 图标）
 - [ ] M4 编组 UI（列表 / 浏览 / 编辑 / 战备总表）
 - [ ] M5 Play 面板（手势输入 / 宏 / 自由输入 / 简化模式）
 - [ ] M6 设置页 + 扫码 + 配置同步 + 备份
 - [ ] M7 真机联调验收 + 安装手册
 
-**当前状态**：M1 + M2 代码均已完成、均待 CI 验证（一次 push 一起验）。M2 新增 5 个源文件 + 2 个测试文件，种子库 stratagem_db.db 已拷入 `CFSiPad/Resources/`，project.yml 已把 Resources 目录整体划入 resources 构建阶段。
-**下一步**：用户 push 后确认 Actions 全绿（Swift 编译 + 全部单元测试）→ 看板给 M1、M2 打勾 → 开始 M3 资源下载。若编译报错，按 Actions 日志修复即可，设计不动。
+**当前状态**：M1 已验收（CI 全绿）。M2 首次 CI 两个用例失败（种子库是 Room v1 结构、无 idx 列），已在 AppDatabase 增加幂等 schema 补齐逻辑修复，待重新 push 验证。
+**下一步**：push 修复 → Actions 全绿后给 M2 打勾 → 开始 M3 资源下载。
 **M2 实现要点备忘（后续模块对接用）**：`AppDatabase.shared` 组装两个库（stratagem_db.db 种子拷贝 + app.db 编组表），暴露 `stratagemStore`（fetchAll/fetchDictionary/count/replaceAll）与 `groupStore`（fetchAllOrdered/insert/update/delete/saveOrder）；`AppSettings.shared` 键名对齐安卓 SharedPreferences，`syncConfigData()` 组装 opt4 整包；`BackupFile` 与安卓 cfs_backup.json 双向兼容——导入忽略 asr/keywords/vibrator，导出保留这些字段并填中性默认值（安卓 Gson 对缺失字段不安全，不可省略）；图标等文件目录用 `AppDatabase.shared.directory` 下的子目录（M3 用）。
 **M1 实现要点备忘（后续模块对接用）**：`AppClient.shared`（actor）暴露 `start/stop/activateMacro/sendInput/syncConfig/setEventListener/isConnected`；sid 用 `AppClient.loadOrCreateSid()` 获取；事件枚举 `AppClientEvent` 含 connecting/retrying(attempt,limit)/connected/disconnected/failed/sent(opt)/authing/authFailed/apiMismatch/serverError；实时指令在网络忙时按安卓原版语义直接丢弃不排队。
 
@@ -238,3 +238,4 @@ cfs-ipad/
 | 2026-08 | **M0 验收通过**：CI 绿灯出包，iPad 真机安装启动成功。实操结论：Sideloadly 签名报错，改用爱思助手 + 免费 Apple ID 签名成功——装机主路径改为爱思助手（第 5 节已更新）。下一步 M1。 |
 | 2026-08 | M1 代码完成：`Support/Constants.swift`（协议常量）、`Network/DataPacket.swift`（opt 0-5 全部报文 Codable，含 opt3 与扫码 AddressData）、`Network/LineFramedConnection.swift`（NWConnection 封装 + LineFrameBuffer 纯分帧器：换行分帧 + opt3 无换行 JSON 回落 + 认证期关读超时）、`Network/AppClient.swift`（actor 状态机：连接/认证/10s 心跳/重连，双忙碌标志复刻安卓双锁语义，sid 生成持久化）；测试 2 个文件 13 个用例（报文字段名核对、粘包/半包/JSON 回落/转义边界、sid 持久化）。待 CI 验证。 |
 | 2026-08 | M2 代码完成：种子库拷入 Resources（project.yml 划分 resources 构建阶段）；`Data/AppDatabase.swift`（种子首启拷贝 + app.db 编组表迁移 + JSONIntList 与安卓 Room 存储格式一致）、`Data/StratagemStore.swift`（战备记录 + fetchAll/fetchDictionary/replaceAll + displayName 语言逻辑）、`Data/GroupStore.swift`（编组 CRUD + saveOrder 拖拽排序落库）、`Data/AppSettings.swift`（全部非 ASR 设置项，键名与默认值经 grep 逐一核对安卓源码：ctrl_lang 默认 auto、db_name 默认 hd2_db、db_version 默认 "0" 等）、`Data/BackupFile.swift`（ver=1 容错解码 + 导入/导出，安卓双向兼容策略见文件头注释）；测试 2 个文件 9 个用例（种子库读取、replaceAll、编组 CRUD/排序、安卓备份解析/导入/导出回环、默认值抽查）。待 CI 验证。 |
+| 2026-08 | 首次 CI：M1 全绿（**M1 验收通过**）；M2 两个用例失败——种子库 stratagem_db.db 实为 Room **v1** 结构（无 idx 列），安卓端靠 AutoMigration 1→2 在打开时补列。修复：AppDatabase 打开战备库时幂等补齐 schema（缺表建表 / 缺 idx 列则 ALTER TABLE 补列），与安卓迁移等价。另确认 CI runner 为 Xcode 26.6。待重新 push 验证。 |
