@@ -28,8 +28,8 @@
 ## 1. 进度看板
 
 - [x] 评估与技术选型（完成于 2026-08-16，见评估报告）
-- [ ] M0 工程骨架 + CI 出包流水线 —— **代码已完成，待验收**（等用户建 GitHub 仓库推送后看 Actions 绿灯 + Sideloadly 装机）
-- [ ] M1 网络协议层（TCP + 认证 + 心跳重连）
+- [x] M0 工程骨架 + CI 出包流水线（2026-08 验收通过：CI 出包 → 爱思助手签名 → iPad 真机启动占位界面）
+- [ ] M1 网络协议层（TCP + 认证 + 心跳重连）—— **代码已完成，待 CI 验证**（push 后看 Actions 单元测试是否全绿）
 - [ ] M2 数据层（GRDB + 设置存储）
 - [ ] M3 资源下载（战备库 + SVG 图标）
 - [ ] M4 编组 UI（列表 / 浏览 / 编辑 / 战备总表）
@@ -37,8 +37,9 @@
 - [ ] M6 设置页 + 扫码 + 配置同步 + 备份
 - [ ] M7 真机联调验收 + 安装手册
 
-**当前状态**：M0 全部文件已写好（project.yml、App 入口与占位视图、测试、CI workflow、README/LICENSE/.gitignore），本地未初始化 git。CI 与真机安装尚未验证。
-**下一步**：用户建公开 GitHub 仓库并推送 → 确认 Actions 绿灯、下载 IPA、Sideloadly 装机能启动 → 在看板给 M0 打勾 → 开始 M1。若 CI 报错，优先检查 project.yml 的 XcodeGen 语法与模拟器选择步骤的输出日志。
+**当前状态**：M1 代码完成，新增 4 个源文件 + 2 个测试文件（见 2026-08 变更记录），尚未经 CI 编译验证。装机链路（Actions 出包 → 爱思助手签名）已在 M0 验证可用。
+**下一步**：用户 push 后确认 Actions 全绿（含单元测试）→ 看板给 M1 打勾 → 开始 M2 数据层。若 Swift 编译报错，直接按 Actions 日志修复后重推即可，无需改动设计。
+**M1 实现要点备忘（后续模块对接用）**：`AppClient.shared`（actor）暴露 `start/stop/activateMacro/sendInput/syncConfig/setEventListener/isConnected`；sid 用 `AppClient.loadOrCreateSid()` 获取；事件枚举 `AppClientEvent` 含 connecting/retrying(attempt,limit)/connected/disconnected/failed/sent(opt)/authing/authFailed/apiMismatch/serverError；实时指令在网络忙时按安卓原版语义直接丢弃不排队。
 
 ## 2. 目录结构规划
 
@@ -204,7 +205,7 @@ cfs-ipad/
 1. 真机全链路：PC 起 Rust 服务器（`cd server && cargo run`）→ iPad 扫码 → 认证（PC 按 y）→ 本地网络权限弹窗 → 宏/自由输入在记事本或游戏内验证按键注入 → 断线重连 → opt4 配置下发。
 2. 修复联调发现的问题（预留会话空间）。
 3. App 图标 + 显示名。
-4. `INSTALL.md`：Sideloadly 安装步骤（Windows 装 iTunes/iCloud 官网版 → USB 连 iPad → 免费 Apple ID 签名 → iPad 开开发者模式 + 信任证书）、7 天续签说明（Sideloadly 自动续签需 PC 开机 + 同网/USB）、常见问题（本地网络权限误拒后去设置开启）。
+4. `INSTALL.md`：以爱思助手为主路径写安装步骤（下载 Actions 产物 → 解压出 ipa → 爱思助手免费 Apple ID 签名安装 → 7 天到期重签），Sideloadly 作备选附注；常见问题（本地网络权限误拒后去设置开启）。
 5. 打 tag `v0.1.0`。
 **验收**：用户在 iPad 上实际呼出一次战备。
 
@@ -212,9 +213,10 @@ cfs-ipad/
 
 ## 5. 构建与安装（速查）
 
-- **出包**：push 到 GitHub → Actions 自动出未签名 ipa（在 run 的 Artifacts 里下载）。
-- **装机**：Windows 上 Sideloadly（v0.60+，sideloadly.io）+ 免费 Apple ID 签名安装；7 天有效，Sideloadly 可在 PC 开机且设备可达时自动续签；免费账号同时最多 3 个侧载 App。
-- **首次装机**：iPad 需开"开发者模式"（设置→隐私与安全性），并在"通用→VPN 与设备管理"信任证书。
+- **出包**：push 到 GitHub → Actions 自动出未签名 ipa（在 run 的 Artifacts 里下载，产物是 zip，解压得 .ipa）。
+- **装机（已验证路径）**：Windows 上**爱思助手**，用免费 Apple ID 签名安装，M0 实测成功。Sideloadly 在用户环境签名报错（原因未查），仅作备选。
+- **续签**：免费 Apple ID 证书 7 天有效，到期后用爱思助手重新签名安装一次即可（数据不丢，覆盖安装）；爱思助手无自动续签，需手动操作。免费账号同时最多 3 个侧载 App。
+- **首次装机**：iPad 需开"开发者模式"（设置→隐私与安全性），并在"通用→VPN 与设备管理"信任证书。（已完成）
 
 ## 6. 执行约定（给后续 agent / 开发者）
 
@@ -232,3 +234,5 @@ cfs-ipad/
 |---|---|
 | 2026-08-16 | 完成可行性评估与技术选型；制定本计划（M0-M7）。决策：SwiftUI 原生、无语音、免费 Apple ID + Sideloadly、GitHub Actions 云编译。 |
 | 2026-08-16 | M0 代码完成：XcodeGen 工程定义（GRDB+SwiftDraw 依赖、iPad-only、双权限描述、TEST_HOST 宿主测试）、App 入口 + 占位根视图、骨架自检测试、CI workflow（动态选 iPad 模拟器跑测试 + 无签名真机包 + IPA 产物上传）、README/LICENSE/.gitignore。待用户建仓库后验收。 |
+| 2026-08 | **M0 验收通过**：CI 绿灯出包，iPad 真机安装启动成功。实操结论：Sideloadly 签名报错，改用爱思助手 + 免费 Apple ID 签名成功——装机主路径改为爱思助手（第 5 节已更新）。下一步 M1。 |
+| 2026-08 | M1 代码完成：`Support/Constants.swift`（协议常量）、`Network/DataPacket.swift`（opt 0-5 全部报文 Codable，含 opt3 与扫码 AddressData）、`Network/LineFramedConnection.swift`（NWConnection 封装 + LineFrameBuffer 纯分帧器：换行分帧 + opt3 无换行 JSON 回落 + 认证期关读超时）、`Network/AppClient.swift`（actor 状态机：连接/认证/10s 心跳/重连，双忙碌标志复刻安卓双锁语义，sid 生成持久化）；测试 2 个文件 13 个用例（报文字段名核对、粘包/半包/JSON 回落/转义边界、sid 持久化）。待 CI 验证。 |
