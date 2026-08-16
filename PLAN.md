@@ -34,11 +34,11 @@
 - [x] M3 资源下载（战备库 + SVG 图标）（2026-08 CI 全绿验收通过；真机下载体验在 M6 接通后一并验）
 - [x] M4 编组 UI（列表 / 浏览 / 编辑 / 战备总表）（2026-08-17 真机点验通过，含图标底板与 SVG use 修复）
 - [x] M5 Play 面板（手势输入 / 宏 / 自由输入 / 简化模式）（2026-08-17 **真机与 PC 服务器联调通过，按键注入正常**——核心链路全线打通）
-- [ ] M6 设置页 + 扫码 + 配置同步 + 备份 —— **代码已完成，待 CI 验证 + 真机点验**（扫码、测试连接、配置推送、数据库更新、备份导入导出各走一遍）
-- [ ] M7 真机联调验收 + 安装手册
+- [x] M6 设置页 + 扫码 + 配置同步 + 备份（2026-08-17 CI 出包通过；真机点验与 M7 一并做）
+- [ ] M7 真机联调验收 + 安装手册 —— **交付物已完成**（App 图标 + 显示名"战备呼叫" + INSTALL.md + README 收尾），待最终真机验收 + 用户打 tag v0.1.0
 
-**当前状态**：M0-M5 已验收（M5 真机与 PC 联调通过，按键注入正常——核心链路全线打通）。M6 代码完成：`Views/Settings/` 下新增 KeyValues.swift（server_api_6.md 附录全键值表 + 按键类型）、QRScannerView.swift（AVFoundation 扫码 + 相机权限处理）、SyncSettingsView.swift（opt4 配置编辑与推送）、SettingsView.swift（连接/测试连接/控制/数据库更新双进度/备份导入导出/关于 + ConnectionTester 一次性连接器 + BackupDocument）；RootView 的临时 SettingsStubView 已删除，正式 SettingsView 接管。
-**下一步**：push 后 Actions 绿灯 → 真机点验 M6 六项（扫码填地址、测试连接、配置推送到服务器并按 Y、数据库更新进度对话框、清缓存、备份导出导入）→ M6 打勾 → M7 收尾（App 图标、INSTALL.md、打 tag）。
+**当前状态**：M0-M6 已完成（M6 CI 出包通过）。M7 交付物已完成：App 图标（GDI+ 自绘 1024，深底金角括号白箭头，入 Assets.xcassets 单尺寸目录，project.yml 已配 ASSETCATALOG_COMPILER_APPICON_NAME）、主屏显示名改为"战备呼叫"（project.yml CFBundleDisplayName，可改回）、INSTALL.md（爱思助手主路径/7 天续签/首次使用流程/常见问题含防火墙）、README 更新功能清单并指向 INSTALL.md。
+**下一步（最终验收，用户执行）**：push → Actions 绿灯 → 重装验证图标与显示名 → 按 PLAN M6/M7 清单走完真机点验（扫码、测试连接、配置推送、数据库更新、备份回环、游戏内实战一局）→ 全部通过后打 tag：`git tag v0.1.0; git push origin v0.1.0` → M7 打勾，项目 v0.1.0 完成。此后进入维护态：改动照常 push 出包，7 天用爱思助手重签一次。
 **M6 实现要点备忘**：AppSettings 非可观察对象，设置界面统一用"本地 FormState 镜像 + Binding set 时即写回"模式（否则 Stepper/LabeledContent 不刷新）；测试连接与配置推送用 ConnectionTester 一次性连接（独立于 Play 页常驻客户端），流程 opt0 → opt5 拿 token →（可选 opt4），认证等待期关读超时；扫码解析字段名是 add；备份导入后编组为追加。
 **M4 已知刻意偏差（对照安卓）**：拖拽排序走 iOS 惯例的"编辑"模式（EditButton）而非长按直拖；欢迎弹窗省略；数据库不完整提示改为列表顶部横幅；设置入口暂为占位页（M6 替换）。
 **重要事实（真机确认）**：种子库 stratagem_table 正式表只含一条"请更新数据库"占位记录（id 非 1/2/3），这是原作者设计——真实战备数据必须联网更新获取；库文件里还有一个 sqlitestudio_temp_table 残留表含完整数据，安卓 Room 与本工程都不读它，勿用。首启"全部战备只有一条请更新数据库、已选显示未知[1][2][3]"为正常状态，更新数据库后自动恢复。设置占位页已临时接通 DatabaseUpdater（HD2 官方源）供 M6 之前更新数据。
@@ -250,3 +250,4 @@ cfs-ipad/
 | 2026-08-17 | M5 代码完成：三个 ogg 音效经 ffmpeg 转 m4a 入 Resources；`Views/Play/PlaySupport.swift`（音效播放器 ambient 混音、连接状态模型与状态条——含"等待认证请按 Y"提示）、`Views/Play/PlayView.swift`（普通模式：深色手势区 + 选中战备步骤高亮 + 右侧列表点击选中/再点取消/左右滑呼叫；自由输入：type3/0/4 序列 + 十字 200ms 高亮；简化模式：网格点击即宏；屏幕常亮 + 隐藏 Home 条 + scenePhase 回前台重连）；删除 PlayPlaceholderView；StepArrowsView 加 completed 高亮；临时设置页补连接地址/端口输入框（端口校验 1-65535）。待 CI + 真机联调。 |
 | 2026-08-17 | **M4/M5 验收通过**：图标底板修复确认有效；真机与 PC 服务器联调成功，宏与自由输入按键注入正常。 |
 | 2026-08-17 | M6 代码完成：键值表常量（全键盘/小键盘/鼠标 + hold/press/long_press/tap/double_tap）、AVFoundation 扫码（权限处理 + 首码去重）、同步配置子页（表单镜像模式 + opt4 整包推送含"按 Y"提示）、设置主页（连接与测试、控制项、数据库更新双进度弹窗可取消、清缓存确认、备份 fileExporter/fileImporter 与安卓互通、关于区）；删除 RootView 临时设置占位。待 CI + 真机点验。 |
+| 2026-08-17 | M6 CI 出包通过。M7 交付：GDI+ 自绘 App 图标（1024 单尺寸 Assets.xcassets + ASSETCATALOG_COMPILER_APPICON_NAME）、显示名"战备呼叫"、INSTALL.md 安装手册（爱思助手主路径、防火墙提示、7 天续签、常见问题表）、README 功能清单。待最终真机验收与 v0.1.0 tag。 |

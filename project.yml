@@ -49,10 +49,13 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.zj.cfsipad
         # 仅 iPad（设备族 2），见 PLAN.md 第 0 节决策
         TARGETED_DEVICE_FAMILY: "2"
+        # App 图标来自 Resources/Assets.xcassets/AppIcon.appiconset（单尺寸 1024）
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: CFSiPad/Support/Info.plist
       properties:
-        CFBundleDisplayName: CFS iPad
+        # 主屏幕显示名（如需改回英文，改这里即可）
+        CFBundleDisplayName: 战备呼叫
         CFBundleDevelopmentRegion: zh-Hans
         # SwiftUI 无故事板启动屏，缺失会导致 App 以兼容分辨率运行
         UILaunchScreen: {}
