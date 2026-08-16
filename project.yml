@@ -1,0 +1,84 @@
+# CFS iPad 工程定义（XcodeGen）
+# 本文件是工程配置的唯一来源：CI 上执行 `xcodegen generate` 生成 .xcodeproj，
+# .xcodeproj 不入库。修改工程配置只改这里。
+# 作者: ZJ
+
+name: CFSiPad
+
+options:
+  minimumXcodeGenVersion: "2.38.0"
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+
+# 依赖锁定为两个（见 PLAN.md 第 6 节约定）：
+# GRDB 数据库层（M2 使用）、SwiftDraw 渲染战备 SVG 图标（M3 使用）
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
+  SwiftDraw:
+    url: https://github.com/swhitty/SwiftDraw
+    from: "0.18.0"
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  CFSiPad:
+    type: application
+    platform: iOS
+    sources:
+      - CFSiPad
+    dependencies:
+      - package: GRDB
+        product: GRDB
+      - package: SwiftDraw
+        product: SwiftDraw
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zj.cfsipad
+        # 仅 iPad（设备族 2），见 PLAN.md 第 0 节决策
+        TARGETED_DEVICE_FAMILY: "2"
+    info:
+      path: CFSiPad/Support/Info.plist
+      properties:
+        CFBundleDisplayName: CFS iPad
+        # SwiftUI 无故事板启动屏，缺失会导致 App 以兼容分辨率运行
+        UILaunchScreen: {}
+        # iPad 全方向自适应（不锁方向，兼容分屏/台前调度），见评估结论
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # 首次向 PC 服务器发起局域网 TCP 连接时，系统据此弹出本地网络授权
+        NSLocalNetworkUsageDescription: 需要访问本地网络，以连接电脑上的战备呼叫服务器（Call for Stratagems Server）。
+        # M6 扫描服务器连接二维码时使用相机
+        NSCameraUsageDescription: 需要使用相机扫描服务器显示的连接二维码，以快速填写连接地址。
+
+  CFSiPadTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - CFSiPadTests
+    dependencies:
+      - target: CFSiPad
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zj.cfsipad.tests
+        # 宿主为主 App：后续模块的测试可 @testable import CFSiPad
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/CFSiPad.app/CFSiPad
+        BUNDLE_LOADER: $(TEST_HOST)
+
+schemes:
+  CFSiPad:
+    build:
+      targets:
+        CFSiPad: all
+        CFSiPadTests: [test]
+    test:
+      targets:
+        - CFSiPadTests

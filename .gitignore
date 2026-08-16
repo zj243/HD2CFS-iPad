@@ -1,0 +1,11 @@
+# 生成物不入库：工程由 project.yml 经 xcodegen 生成
+*.xcodeproj
+DerivedData/
+build/
+Payload/
+*.ipa
+
+# 系统与 IDE 杂项
+.DS_Store
+xcuserdata/
+.swiftpm/

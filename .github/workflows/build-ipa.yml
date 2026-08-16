@@ -1,0 +1,75 @@
+# CI 出包流水线：xcodegen 生成工程 -> iPad 模拟器跑单元测试 -> 编译未签名真机包 -> 上传 IPA 产物
+# 产物下载后用 Sideloadly + 免费 Apple ID 签名安装到 iPad（见 PLAN.md 第 5 节）
+# 作者: ZJ
+
+name: build-ipa
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      # 本 App 仅支持 iPad（设备族 2），测试必须跑在 iPad 模拟器上；
+      # 不同 runner 镜像的模拟器名称不同，这里动态取第一台可用 iPad，避免写死机型名
+      - name: Select iPad simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          for devs in data["devices"].values():
+              for dev in devs:
+                  if dev.get("isAvailable") and "iPad" in dev["name"]:
+                      print(dev["udid"]); sys.exit(0)
+          sys.exit("no available iPad simulator on this runner")
+          ')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "selected simulator: $UDID"
+
+      - name: Run unit tests (iPad simulator)
+        run: |
+          xcodebuild test \
+            -project CFSiPad.xcodeproj \
+            -scheme CFSiPad \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO
+
+      # 无签名编译真机包：签名环节完全交给 Windows 端 Sideloadly 完成
+      - name: Build unsigned device binary
+        run: |
+          xcodebuild build \
+            -project CFSiPad.xcodeproj \
+            -scheme CFSiPad \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      # IPA 本质是 Payload/xxx.app 结构的 zip，手工打包即可
+      - name: Package unsigned IPA
+        run: |
+          APP_DIR="DerivedData/Build/Products/Release-iphoneos/CFSiPad.app"
+          test -d "$APP_DIR" || { echo "app bundle not found: $APP_DIR"; exit 1; }
+          mkdir -p Payload
+          cp -R "$APP_DIR" Payload/
+          zip -qry CFSiPad-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CFSiPad-unsigned-ipa-${{ github.run_number }}
+          path: CFSiPad-unsigned.ipa
+          if-no-files-found: error
