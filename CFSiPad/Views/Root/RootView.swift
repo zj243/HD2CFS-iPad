@@ -37,7 +37,7 @@ struct RootView: View {
                     case .browse(let group):
                         GroupView(groupId: group.id ?? -1)
                     case .play(let group):
-                        PlayPlaceholderView(group: group)
+                        PlayView(group: group)
                     case .stratagemList:
                         StratagemListView()
                     }
@@ -221,6 +221,8 @@ struct RootView: View {
 private struct SettingsStubView: View {
     @Environment(\.dismiss) private var dismiss
 
+    @State private var address = AppSettings.shared.connAddress
+    @State private var portText = String(AppSettings.shared.connPort)
     @State private var isUpdating = false
     @State private var statusText = ""
     @State private var updateTask: Task<Void, Never>?
@@ -229,6 +231,14 @@ private struct SettingsStubView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("连接（Play 页使用；扫码等完整功能在 M6）") {
+                    TextField("服务器地址（PC 局域网 IP）", text: $address)
+                        .keyboardType(.numbersAndPunctuation)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    TextField("端口（默认 23333）", text: $portText)
+                        .keyboardType(.numberPad)
+                }
                 Section("战备数据库") {
                     Button(action: startUpdate) {
                         if isUpdating {
@@ -259,6 +269,7 @@ private struct SettingsStubView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") {
+                        guard saveConnection() else { return }
                         updateTask?.cancel()
                         dismiss()
                     }
@@ -266,6 +277,20 @@ private struct SettingsStubView: View {
             }
             .errorAlert($errorMessage)
         }
+    }
+
+    /// 校验并保存连接设置；端口非法时报错并阻止关闭
+    private func saveConnection() -> Bool {
+        let trimmedAddress = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let port = Int(portText.trimmingCharacters(in: .whitespaces)),
+              (1...65535).contains(port) else {
+            errorMessage = "端口号无效：\(portText)（应为 1-65535）"
+            return false
+        }
+        let settings = AppSettings.shared
+        settings.connAddress = trimmedAddress.isEmpty ? "127.0.0.1" : trimmedAddress
+        settings.connPort = port
+        return true
     }
 
     /// 执行完整更新流程（index → 数据库重建 → 图标逐个下载），进度实时展示

@@ -33,12 +33,13 @@
 - [x] M2 数据层（GRDB + 设置存储）（2026-08 CI 全绿验收通过，含种子库 v1 迁移修复）
 - [x] M3 资源下载（战备库 + SVG 图标）（2026-08 CI 全绿验收通过；真机下载体验在 M6 接通后一并验）
 - [ ] M4 编组 UI（列表 / 浏览 / 编辑 / 战备总表）—— **代码已完成，待 CI 验证 + 真机点验**（真机装上后走一遍：建组/选战备/排序/浏览/详情/删除）
-- [ ] M5 Play 面板（手势输入 / 宏 / 自由输入 / 简化模式）
+- [ ] M5 Play 面板（手势输入 / 宏 / 自由输入 / 简化模式）—— **代码已完成，待 CI 验证 + 真机联调**（联调需 PC 起服务器）
 - [ ] M6 设置页 + 扫码 + 配置同步 + 备份
 - [ ] M7 真机联调验收 + 安装手册
 
-**当前状态**：M0-M3 已验收。M4 代码完成：删除 M0 占位视图，App 入口切换为 RootView；新增 Views/Shared/StratagemViews.swift（箭头/单元/详情弹窗/errorAlert）、Root/RootView.swift（编组列表 + 路由 RootRoute + 设置占位 SettingsStubView）、Group/GroupView.swift、Group/EditGroupView.swift、Group/StratagemListView.swift、Play/PlayPlaceholderView.swift（M5 整体替换）；Stratagem/StratagemGroup 增加 Hashable/Identifiable，GroupStore 增加 fetch(id:)，AppSettings 增加 dbDisplayName，project.yml 开发语言设为 zh-Hans。
-**下一步**：push 后 Actions 绿灯 → 真机装机点验编组主流程 → M4 打勾 → 开始 M5 Play 面板。
+**当前状态**：M0-M3 已验收；M4 代码完成、用户真机点验中（图标底板修复待确认）。M5 代码完成：三个音效已用 ffmpeg 转为 m4a 入 Resources；新增 Views/Play/PlaySupport.swift（PlaySoundPlayer + ConnectionStatusModel + ConnectionStatusBar）与 Views/Play/PlayView.swift（普通模式手势区+右侧列表、条目左右滑呼叫宏、自由输入十字指示、简化模式网格、状态条、常亮、回前台重连）；PlayPlaceholderView 已删除，RootView 路由指向 PlayView；StepArrowsView 增加 completed 进度高亮参数。
+**下一步**：push 后 Actions 绿灯 → 真机联调（PC 起服务器 `cd server && cargo run`，或用 release 的 exe）：扫码/填地址 → 认证按 Y → 选战备滑动输入 → 游戏内验证按键注入。联调通过后 M4/M5 一起打勾 → 开始 M6 设置页。
+**M5 实现要点备忘**：手势判定复刻安卓 onFling（|dx|/|dy| 定轴 + 距离/速度双阈值，用 iOS 17 DragGesture.Value.velocity）；完成输入后取消选中（安卓行为）；自由输入进入/退出/每步都播 step 音效（安卓行为）；离开页面时若自由输入未退出会补发 {step:0,type:4} 再断开；临时设置页已加连接地址/端口输入框（含校验），M5 真机联调不依赖 M6。
 **M4 已知刻意偏差（对照安卓）**：拖拽排序走 iOS 惯例的"编辑"模式（EditButton）而非长按直拖；欢迎弹窗省略；数据库不完整提示改为列表顶部横幅；设置入口暂为占位页（M6 替换）。
 **重要事实（真机确认）**：种子库 stratagem_table 正式表只含一条"请更新数据库"占位记录（id 非 1/2/3），这是原作者设计——真实战备数据必须联网更新获取；库文件里还有一个 sqlitestudio_temp_table 残留表含完整数据，安卓 Room 与本工程都不读它，勿用。首启"全部战备只有一条请更新数据库、已选显示未知[1][2][3]"为正常状态，更新数据库后自动恢复。设置占位页已临时接通 DatabaseUpdater（HD2 官方源）供 M6 之前更新数据。
 **M3 实现要点备忘（后续模块对接用）**：`DatabaseUpdater(fetcher:database:settings:).update(channel:onEvent:)` 跑完整更新（事件枚举 DatabaseUpdateEvent 驱动双进度对话框），`clearCache()` 清图标+清表+版本回 "0"（调用方需同时 `StratagemIconCache.shared.clear()`）；db_version 语义："0" 仅种子 / "1" 更新中断不完整 / 其余为完成日期；图标视图用 `StratagemIconView(icon:dbName:)`，缺文件自动显示问号占位；SwiftDraw 的 `SVG(fileURL:).rasterize()` 若 CI 报 API 不匹配，按其当前版本签名微调即可（仅此一处调用）。
@@ -246,3 +247,4 @@ cfs-ipad/
 | 2026-08 | **M3 验收通过**（CI 全绿）。M4 代码完成：App 入口切换 RootView（占位视图删除）；编组列表（缩略图行/+N 计数/编辑模式拖拽排序落库/上下文菜单/空态/数据库状态横幅）、编组浏览（自适应网格/详情弹窗/库不匹配告警/删除确认/开始游玩入口）、新建-编辑编组（默认勾选 1/2/3、已选拖拽排序、全量列表勾选、留空默认名、dbName 写当前库）、战备总表（标题为当前库显示名）；PlayPlaceholderView 占位待 M5 替换。模型层补 Hashable/Identifiable 与 GroupStore.fetch(id:)。待 CI + 真机点验。 |
 | 2026-08 | 真机点验发现首启"全部战备"仅一条"请更新数据库"——经查种子库正式表本就只含该占位记录（安卓同状态，属预期）。为让 M6 之前可用：设置占位页临时接通 DatabaseUpdater（HD2 官方源、进度文本、取消保留断点、完成清图标缓存），设置 sheet 关闭时刷新根列表。 |
 | 2026-08 | 真机数据库更新成功（107 条战备 + 全部图标），但图标显示不完整。根因两个（已抓取源文件确认）：① 图标主体 fill="#fff" 纯白、为深色界面设计，在浅色列表上隐形——修复：StratagemIconView 统一垫深灰蓝底板（还原原 App 军事风）；② 个别图标（hmg_emplacement）用 SVG2 的 `<use href>` 写法导致 SwiftDraw 解析失败——修复：加载时改写为 xlink:href 并补命名空间，修补结果写回文件（幂等），新增 patchUseHref 单测。**注意：战备 SVG 图标主体是纯白，任何展示场景都必须垫深色底。** |
+| 2026-08-17 | M5 代码完成：三个 ogg 音效经 ffmpeg 转 m4a 入 Resources；`Views/Play/PlaySupport.swift`（音效播放器 ambient 混音、连接状态模型与状态条——含"等待认证请按 Y"提示）、`Views/Play/PlayView.swift`（普通模式：深色手势区 + 选中战备步骤高亮 + 右侧列表点击选中/再点取消/左右滑呼叫；自由输入：type3/0/4 序列 + 十字 200ms 高亮；简化模式：网格点击即宏；屏幕常亮 + 隐藏 Home 条 + scenePhase 回前台重连）；删除 PlayPlaceholderView；StepArrowsView 加 completed 高亮；临时设置页补连接地址/端口输入框（端口校验 1-65535）。待 CI + 真机联调。 |

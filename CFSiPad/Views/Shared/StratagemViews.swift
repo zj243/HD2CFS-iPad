@@ -9,11 +9,14 @@ import SwiftUI
 /// 呼叫步骤箭头序列（1上 2下 3左 4右，未知值显示问号）
 struct StepArrowsView: View {
     let steps: [Int]
+    /// 已完成步骤数（Play 页输入进度高亮），已完成的箭头显示为黄色
+    var completed: Int = 0
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { _, step in
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                 Image(systemName: Self.symbol(for: step))
+                    .foregroundStyle(index < completed ? Color.yellow : Color.primary)
             }
         }
     }
@@ -95,7 +98,6 @@ struct StratagemInfoSheet: View {
                 .multilineTextAlignment(.center)
             StepArrowsView(steps: stratagem.steps)
                 .font(.title3)
-                .foregroundStyle(Color.accentColor)
         }
         .padding(32)
         .presentationDetents([.medium])
