@@ -28,4 +28,8 @@ enum CFSConstants {
     /// 服务器端按 sid 记忆认证记录（默认 3 天有效期）
     static let sidLength = 16
     static let sidKey = "sid"
+
+    /// 战备数据库官方源（与安卓版 Constants.kt 一致；db_channel 2 时改用用户自定义 URL）
+    static let urlDbHD2 = "https://cfsdb-hd2.wistefinch.site/index.json"
+    static let urlDbHD = "https://cfsdb-hd.wistefinch.site/index.json"
 }

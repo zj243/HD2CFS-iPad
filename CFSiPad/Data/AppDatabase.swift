@@ -46,6 +46,13 @@ final class AppDatabase {
     /// 数据根目录，图标缓存等文件后续模块也放在此目录的子目录下
     let directory: URL
 
+    /// 战备 SVG 图标缓存目录（按数据库名分目录，对应安卓版 filesDir/icons/<dbName>/）
+    func iconsDirectory(dbName: String) -> URL {
+        directory
+            .appendingPathComponent("icons", isDirectory: true)
+            .appendingPathComponent(dbName, isDirectory: true)
+    }
+
     static let shared: AppDatabase = {
         do {
             let support = try FileManager.default.url(
